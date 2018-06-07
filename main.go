@@ -12,7 +12,7 @@ import (
 	id3 "github.com/mikkyang/id3-go"
 )
 
-const version = "0.2"
+const version = "0.3"
 
 // FileID3 is file with id3 tag
 type FileID3 struct {
@@ -47,6 +47,23 @@ func main() {
 		}
 		files := loadList(path)
 		patchID3Tags(path, files)
+	case "info":
+		if len(os.Args) <= 2 {
+			throwError("no mp3 file to be read")
+		}
+		fname := os.Args[2]
+		info, e := getInfo(fname)
+		if e != nil {
+			throwError(e.Error())
+		}
+		format.Printfln("File: %<filename>s\nTitle: %<title>s\nAlbum: %<album>s\nArtist: %<artist>s\nYear: %<year>s\nGenre: %<genre>s", map[string]interface{}{
+			"filename": info.FileName,
+			"title":    info.Title,
+			"album":    info.Album,
+			"artist":   info.Artist,
+			"year":     info.Year,
+			"genre":    info.Genre,
+		})
 	case "version":
 		format.Printfln("v%<version>s", map[string]interface{}{
 			"version": version,
@@ -55,6 +72,24 @@ func main() {
 		fmt.Printf("unexpected command: %s\n", cmd)
 		throwHelp()
 	}
+}
+
+func getInfo(fname string) (f FileID3, e error) {
+	if _, e = os.Stat(fname); e == nil {
+		mp3, e := id3.Open(fname)
+		defer mp3.Close()
+		if e == nil {
+			f = FileID3{
+				FileName: fname,
+				Artist:   strings.TrimSpace(strings.TrimRight(mp3.Artist(), "\u0000")),
+				Album:    strings.TrimSpace(strings.TrimRight(mp3.Album(), "\u0000")),
+				Title:    strings.TrimSpace(strings.TrimRight(mp3.Title(), "\u0000")),
+				Year:     strings.TrimSpace(strings.TrimRight(mp3.Year(), "\u0000")),
+				Genre:    strings.TrimSpace(strings.TrimRight(mp3.Genre(), "\u0000")),
+			}
+		}
+	}
+	return
 }
 
 func patchID3Tags(path string, files []FileID3) {
@@ -67,9 +102,9 @@ func patchID3Tags(path string, files []FileID3) {
 			"filename": fname,
 		})
 		mp3, err := id3.Open(fname)
-		defer mp3.Close()
 
 		if err != nil {
+			mp3.Close()
 			throwError(err.Error())
 		}
 
@@ -78,6 +113,8 @@ func patchID3Tags(path string, files []FileID3) {
 		mp3.SetTitle(v.Title)
 		mp3.SetGenre(v.Genre)
 		mp3.SetYear(v.Year)
+
+		mp3.Close()
 	}
 }
 
@@ -114,17 +151,10 @@ func listFiles(path string) []FileID3 {
 		if strings.ToLower(ext) == ".mp3" {
 			if !f.IsDir() {
 				fname := filepath.Clean(path + f.Name())
-				mp3, err := id3.Open(fname)
-				defer mp3.Close()
+
+				mp3, err := getInfo(fname)
 				if err == nil {
-					out = append(out, FileID3{
-						FileName: fname,
-						Artist:   strings.TrimSpace(strings.TrimRight(mp3.Artist(), "\u0000")),
-						Album:    strings.TrimSpace(strings.TrimRight(mp3.Album(), "\u0000")),
-						Title:    strings.TrimSpace(strings.TrimRight(mp3.Title(), "\u0000")),
-						Year:     strings.TrimSpace(strings.TrimRight(mp3.Year(), "\u0000")),
-						Genre:    strings.TrimSpace(strings.TrimRight(mp3.Genre(), "\u0000")),
-					})
+					out = append(out, mp3)
 				}
 			}
 		}
@@ -133,7 +163,7 @@ func listFiles(path string) []FileID3 {
 }
 
 func throwHelp() {
-	throwError("usage:\n    mp3-tag-patch list <path>\n    mp3-tag-patch version")
+	throwError("usage:\n    mp3-tag-patch list [<path>]\n    mp3-tag-patch version\n    mp3-tag-patch info <filename>")
 }
 
 func throwError(msg string) {
