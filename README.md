@@ -1,4 +1,6 @@
-# Patch mp3 file with custom ID3 tag
+# MP3 ID3 Tag Patch
+
+Patch mp3 file with custom ID3 tag.
 
 ## Create ID3 tag file list
 
