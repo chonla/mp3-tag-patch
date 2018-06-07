@@ -12,7 +12,7 @@ import (
 	id3 "github.com/mikkyang/id3-go"
 )
 
-const version = "0.1"
+const version = "0.2"
 
 // FileID3 is file with id3 tag
 type FileID3 struct {
