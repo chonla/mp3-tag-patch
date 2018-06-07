@@ -12,6 +12,8 @@ import (
 	id3 "github.com/mikkyang/id3-go"
 )
 
+const version = "0.1"
+
 // FileID3 is file with id3 tag
 type FileID3 struct {
 	FileName string `json:"file-name"`
@@ -45,6 +47,10 @@ func main() {
 		}
 		files := loadList(path)
 		patchID3Tags(path, files)
+	case "version":
+		format.Printfln("v%<version>s", map[string]interface{}{
+			"version": version,
+		})
 	default:
 		fmt.Printf("unexpected command: %s\n", cmd)
 		throwHelp()
@@ -127,7 +133,7 @@ func listFiles(path string) []FileID3 {
 }
 
 func throwHelp() {
-	throwError("usage: mp3-tag-patch list <path>")
+	throwError("usage:\n    mp3-tag-patch list <path>\n    mp3-tag-patch version")
 }
 
 func throwError(msg string) {
